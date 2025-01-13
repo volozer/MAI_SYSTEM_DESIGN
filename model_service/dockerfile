@@ -1,0 +1,23 @@
+# Use an official Python image with TensorFlow compatibility
+FROM python:3.10-slim
+
+# Set the working directory in the container
+WORKDIR /app
+
+# Copy the requirements file into the container
+COPY requirements.txt .
+
+# Install the required Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the application code into the container
+COPY . .
+
+# Expose any necessary ports (optional, based on your service)
+EXPOSE 9092
+
+# Set environment variables for Kafka (optional, override with .env file)
+ENV KAFKA_BROKER=localhost:9092
+
+# Define the entry point to run the Kafka server
+CMD ["python", "service_model.py"]
