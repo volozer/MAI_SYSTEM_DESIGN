@@ -1,0 +1,23 @@
+# Use the official Python image with the desired version
+FROM python:3.10-slim
+
+# Set the working directory in the container
+WORKDIR /app
+
+# Copy the requirements file into the container
+COPY requirements.txt .
+
+# Install the dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy the entire application into the container
+COPY . .
+
+# Expose the port that FastAPI will run on
+EXPOSE 8000
+
+# Set environment variables for Kafka (optional, override with .env file)
+ENV KAFKA_BROKER=localhost:9092
+
+# Run the FastAPI application
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
