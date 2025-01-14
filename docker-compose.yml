@@ -1,34 +1,52 @@
----
-version: '3'
+version: '3.3'  # Обновите версию, если нужно
+
+networks: 
+  rmoff_kafka:
+    name: rmoff_kafka
+    driver: bridge
+
 services:
   zookeeper:
-    image: confluentinc/cp-zookeeper:7.5.0
+    image: confluentinc/cp-zookeeper:7.3.0
+    container_name: zookeeper
+    networks: 
+      - rmoff_kafka
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
-    ports:
-      - "2181:2181"
+      ZOOKEEPER_TICK_TIME: 2000
 
-  kafka:
-    image: confluentinc/cp-kafka:7.5.0
+  broker:
+    image: wurstmeister/kafka
+    container_name: broker
+    networks: 
+      - rmoff_kafka
+    ports:
+      - "9092:9092"
     depends_on:
       - zookeeper
     environment:
       KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_ADVERTISED_HOSTNAME: broker
+      KAFKA_ADVERTISED_LISTENERS: LISTENER_INTERNAL://broker:29090,LISTENER_EXTERNAL://broker:9092
+      KAFKA_LISTENERS: LISTENER_INTERNAL://broker:29090,LISTENER_EXTERNAL://broker:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: LISTENER_INTERNAL:PLAINTEXT,LISTENER_EXTERNAL:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: LISTENER_INTERNAL
+      ALLOW_PLAINTEXT_LISTENER: 'true'
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-    ports:
-      - "9092:9092"
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+      KAFKA_CREATE_TOPICS: "server:1:1,client:1:1"
 
   fastapi_service:
     build:
       context: ./web_service
       dockerfile: Dockerfile
     depends_on:
-      - kafka
+      - broker
     environment:
-      KAFKA_BROKER: kafka:9092
+      KAFKA_BROKER: broker:9092
     ports:
       - "8000:8000"
     volumes:
@@ -39,9 +57,9 @@ services:
       context: ./model_service
       dockerfile: Dockerfile
     depends_on:
-      - kafka
+      - broker
     environment:
-      KAFKA_BROKER: kafka:9092
+      KAFKA_BROKER: broker:9092
     ports:
       - "5000:5000"
     volumes:
